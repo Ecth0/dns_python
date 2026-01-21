@@ -2,7 +2,10 @@
 from .base import Strategy
 from .txt_parser import TXTParserStrategy
 from .tld_crawler import TLDCrawlerStrategy
-
+from .srv_scanner import SRVScannerStrategy
+from .reverse_dns import ReverseDNSStrategy
+from .ip_neighbors import IPNeighborsStrategy
+from .subdomain_enum import SubdomainEnumStrategy
 __all__ = ['Strategy']
 
 

@@ -4,7 +4,7 @@ Remonte la hiérarchie DNS jusqu'au TLD pour découvrir les domaines parents.
 """
 from typing import Set, Dict, Any
 from .base import Strategy
-from ..dns_utils import query_dns, is_valid_domain
+from ..dns_functions import query_dns, is_valid_domain
 
 
 class TLDCrawlerStrategy(Strategy):

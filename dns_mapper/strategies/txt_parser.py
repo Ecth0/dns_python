@@ -77,13 +77,7 @@ class TXTParserStrategy(Strategy):
         
         return results
     
-    def _create_result(self, type_: str, value: str, source: str, 
-                      metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """Crée un dictionnaire de résultat hashable."""
-        # On utilise un tuple pour rendre hashable
-        return {
-            'type': type_,
-            'value': value,
-            'source': source,
-            'metadata': tuple(sorted(metadata.items()))
-        }
+    def _create_result(self, type_: str, value: str, source: str,
+                      metadata: Dict[str, Any]) -> tuple:
+        """Crée un tuple de résultat hashable."""
+        return (type_, value, source, tuple(sorted(metadata.items())))
