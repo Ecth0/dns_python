@@ -1,5 +1,7 @@
 """Stratégies de découverte DNS."""
 from .base import Strategy
+from .txt_parser import TXTParserStrategy
+from .tld_crawler import TLDCrawlerStrategy
 
 __all__ = ['Strategy']
 
