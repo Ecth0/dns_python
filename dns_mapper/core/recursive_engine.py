@@ -1,7 +1,6 @@
 """
-Moteur de récursion pour orchestrer les stratégies.
-Gère la profondeur, les cycles, et l'exécution des stratégies.
-VERSION CORRIGÉE - Gère les résultats tuple et dict.
+Moteur de récursion optimisé.
+Version rapide avec moins de prints.
 """
 from typing import Set, Dict, Any, List
 from collections import defaultdict
@@ -17,38 +16,33 @@ class RecursiveEngine:
         Args:
             strategies: Liste des stratégies à utiliser
             max_depth: Profondeur maximale de récursion
-            exclude_domains: Domaines à exclure (akamai, cloudfront, etc.)
+            exclude_domains: Domaines à exclure
         """
         self.strategies = strategies
         self.max_depth = max_depth
         self.exclude_domains = exclude_domains or set()
         
-        # Suivi des éléments déjà visités pour éviter les cycles
+        # Suivi des éléments visités
         self.visited = set()
         
-        # Graphe des relations (pour l'affichage)
+        # Graphe des relations
         self.graph = defaultdict(list)
         
-        # Tous les résultats collectés
+        # Tous les résultats
         self.all_results = {
             'domains': set(),
             'ips': set(),
             'relationships': []
         }
+        
+        # Compteur pour affichage minimal
+        self.discovery_count = 0
     
     def analyze(self, initial_domain: str) -> Dict[str, Any]:
-        """
-        Lance l'analyse récursive d'un domaine.
+        """Lance l'analyse récursive."""
+        print(f"Analyse de {initial_domain}...")
         
-        Args:
-            initial_domain: Domaine de départ
-        
-        Returns:
-            Dictionnaire avec tous les résultats
-        """
-        print(f"🔍 Analyse de {initial_domain}...")
-        
-        # Réinitialise l'état
+        # Réinitialise
         self.visited.clear()
         self.graph.clear()
         self.all_results = {
@@ -56,6 +50,7 @@ class RecursiveEngine:
             'ips': set(),
             'relationships': []
         }
+        self.discovery_count = 0
         
         # Lance la récursion
         self._recursive_analyze(initial_domain, depth=0, parent=None)
@@ -74,15 +69,8 @@ class RecursiveEngine:
         }
     
     def _recursive_analyze(self, target: str, depth: int, parent: str = None):
-        """
-        Analyse récursive d'une cible.
-        
-        Args:
-            target: Domaine ou IP à analyser
-            depth: Profondeur actuelle
-            parent: Cible parente (pour le graphe)
-        """
-        # Vérifie la profondeur maximale
+        """Analyse récursive d'une cible."""
+        # Vérifie la profondeur
         if depth > self.max_depth:
             return
         
@@ -92,39 +80,38 @@ class RecursiveEngine:
         
         self.visited.add(target)
         
-        # Affiche la progression
-        indent = "  " * depth
-        print(f"{indent}├─ {target} (depth: {depth})")
+        # Affichage minimal (seulement depth 0 et 1)
+        if depth <= 1:
+            indent = "  " * depth
+            print(f"{indent}[depth {depth}] {target}")
         
-        # Contexte partagé entre les stratégies
+        # Contexte partagé
         context = {
             'depth': depth,
             'parent': parent,
             'visited': self.visited,
         }
         
-        # Exécute chaque stratégie
+        # Exécute les stratégies
         discovered = []
         for strategy in self.strategies:
             try:
                 results = strategy.discover(target, context)
                 
                 for result in results:
-                    # Normalise le résultat (peut être tuple ou dict)
+                    # Normalise le résultat
                     if isinstance(result, tuple):
-                        # Format: (type, value, source, metadata_tuple)
                         result_type = result[0]
                         result_value = result[1]
                         result_source = result[2]
                         result_metadata = dict(result[3]) if len(result) > 3 else {}
                     else:
-                        # Format dict
                         result_type = result.get('type')
                         result_value = result.get('value')
                         result_source = result.get('source')
                         result_metadata = dict(result.get('metadata', {})) if isinstance(result.get('metadata'), tuple) else result.get('metadata', {})
                     
-                    # Ajoute aux résultats globaux
+                    # Ajoute aux résultats
                     if result_type == 'domain':
                         self.all_results['domains'].add(result_value)
                     elif result_type == 'ip':
@@ -150,13 +137,19 @@ class RecursiveEngine:
                     # Prépare pour la récursion
                     discovered.append(result_value)
                     
+                    # Compteur
+                    self.discovery_count += 1
+                    
+                    # Affiche un point tous les 20 résultats
+                    if self.discovery_count % 20 == 0:
+                        print(".", end="", flush=True)
+                    
             except Exception as e:
-                print(f"{indent} Erreur avec {strategy.name}: {e}")
-                # Décommenter pour debug :
-                # import traceback
-                # traceback.print_exc()
+                # Affiche les erreurs seulement en depth 0
+                if depth == 0:
+                    print(f"  [WARNING] Erreur avec {strategy.name}: {e}")
         
-        # Récursion sur les éléments découverts
+        # Récursion sur les découvertes
         for discovered_item in discovered:
             if discovered_item not in self.visited:
                 self._recursive_analyze(discovered_item, depth + 1, parent=target)
